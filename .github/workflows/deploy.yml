@@ -48,6 +48,32 @@ jobs:
           echo "Publicando $REF_PUBLICADA (commit $COMMIT) — evento: $EVENTO"
           cat build-info.json
 
+      # Ação corretiva do post-mortem (causa 1): impede publicar uma versão
+      # cuja configuração aponta para capas que não existem no repositório.
+      - name: Validar a release (capas do catálogo)
+        shell: python
+        run: |
+          import json, os, sys
+
+          config = json.load(open("config/app-config.json", encoding="utf-8"))
+          pasta = config["pastaCapas"]
+          catalogo = json.load(open(config["catalogoUrl"], encoding="utf-8"))
+
+          faltando = [
+              os.path.join(pasta, jogo["capa"])
+              for jogo in catalogo["jogos"]
+              if not os.path.isfile(os.path.join(pasta, jogo["capa"]))
+          ]
+
+          print(f"Pasta de capas configurada: {pasta}")
+          print(f"Jogos no catálogo: {len(catalogo['jogos'])}")
+          if faltando:
+              for caminho in faltando:
+                  print(f"::error file=config/app-config.json::Capa não encontrada: {caminho}")
+              print(f"DEPLOY BLOQUEADO: {len(faltando)} capa(s) não encontrada(s).")
+              sys.exit(1)
+          print("Validação OK: todas as capas do catálogo existem.")
+
       - name: Configurar Pages
         uses: actions/configure-pages@v5
 
