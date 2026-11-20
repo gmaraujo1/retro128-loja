@@ -4,23 +4,26 @@
 
 let CONFIG = null;
 let JOGOS = [];
-const carrinho = new Map();   // id do jogo -> { jogo, quantidade }
-const filtro = { genero: 'Todos', texto: '' };
+const carrinho = new Map(); // id do jogo -> { jogo, quantidade }
+const filtro = { genero: "Todos", texto: "" };
 
-const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const BRL = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
 function formatarBRL(valor) {
   return BRL.format(valor);
 }
 
 /* Preço efetivamente cobrado de um jogo */
 function precoDe(jogo) {
-  return jogo.preco;
+  return precoComDesconto(jogo, CONFIG);
 }
 
 /* ---------------- Carregamento ---------------- */
 
 function carregarConfig() {
-  return Observabilidade.buscarJSON('config/app-config.json');
+  return Observabilidade.buscarJSON("config/app-config.json");
 }
 
 function carregarCatalogo(config) {
@@ -34,7 +37,7 @@ function urlCapa(jogo) {
 }
 
 function renderizarDestaque(jogo) {
-  const el = document.getElementById('destaque');
+  const el = document.getElementById("destaque");
   el.innerHTML = `
     <img class="destaque-capa" src="${urlCapa(jogo)}" alt="Capa de ${jogo.titulo}">
     <div class="destaque-texto">
@@ -48,17 +51,18 @@ function renderizarDestaque(jogo) {
 
 function criarCard(jogo) {
   const final = precoDe(jogo);
-  const precoHtml = final < jogo.preco
-    ? `<s>${formatarBRL(jogo.preco)}</s> <strong class="preco-promo">${formatarBRL(final)}</strong>`
-    : `<strong>${formatarBRL(final)}</strong>`;
+  const precoHtml =
+    final < jogo.preco
+      ? `<s>${formatarBRL(jogo.preco)}</s> <strong class="preco-promo">${formatarBRL(final)}</strong>`
+      : `<strong>${formatarBRL(final)}</strong>`;
 
-  const card = document.createElement('article');
-  card.className = 'card';
+  const card = document.createElement("article");
+  card.className = "card";
   card.dataset.id = jogo.id;
   card.innerHTML = `
     <div class="card-capa">
       <img src="${urlCapa(jogo)}" alt="Capa de ${jogo.titulo}" loading="lazy">
-      ${final < jogo.preco ? `<span class="selo-promo">-${Math.round((1 - final / jogo.preco) * 100)}%</span>` : ''}
+      ${final < jogo.preco ? `<span class="selo-promo">-${Math.round((1 - final / jogo.preco) * 100)}%</span>` : ""}
     </div>
     <div class="card-corpo">
       <h3>${jogo.titulo}</h3>
@@ -72,16 +76,18 @@ function criarCard(jogo) {
 
 function jogosFiltrados() {
   const texto = filtro.texto.trim().toLowerCase();
-  return JOGOS.filter((j) =>
-    (filtro.genero === 'Todos' || j.genero === filtro.genero) &&
-    (!texto || j.titulo.toLowerCase().includes(texto)));
+  return JOGOS.filter(
+    (j) =>
+      (filtro.genero === "Todos" || j.genero === filtro.genero) &&
+      (!texto || j.titulo.toLowerCase().includes(texto)),
+  );
 }
 
 function renderizarCatalogo() {
   const lista = jogosFiltrados();
-  const grade = document.getElementById('grade');
-  const contagem = document.getElementById('contagem');
-  grade.innerHTML = '';
+  const grade = document.getElementById("grade");
+  const contagem = document.getElementById("contagem");
+  grade.innerHTML = "";
   contagem.textContent = `${JOGOS.length} jogos no catálogo`;
 
   let exibidos = 0;
@@ -96,11 +102,14 @@ function renderizarCatalogo() {
 }
 
 function renderizarFiltros() {
-  const generos = ['Todos', ...new Set(JOGOS.map((j) => j.genero))];
-  const el = document.getElementById('filtros');
+  const generos = ["Todos", ...new Set(JOGOS.map((j) => j.genero))];
+  const el = document.getElementById("filtros");
   el.innerHTML = generos
-    .map((g) => `<button class="chip${g === filtro.genero ? ' ativo' : ''}" data-genero="${g}">${g}</button>`)
-    .join('');
+    .map(
+      (g) =>
+        `<button class="chip${g === filtro.genero ? " ativo" : ""}" data-genero="${g}">${g}</button>`,
+    )
+    .join("");
 }
 
 /* ---------------- Carrinho ---------------- */
@@ -115,7 +124,10 @@ function adicionarAoCarrinho(id) {
   }
   item.quantidade += 1;
   carrinho.set(id, item);
-  Observabilidade.info('CARRINHO_ADICIONOU', jogo.titulo, { id, quantidade: item.quantidade });
+  Observabilidade.info("CARRINHO_ADICIONOU", jogo.titulo, {
+    id,
+    quantidade: item.quantidade,
+  });
   renderizarCarrinho();
   avisar(`${jogo.titulo} foi para o carrinho.`);
 }
@@ -136,30 +148,42 @@ function totalCarrinho() {
 function renderizarCarrinho() {
   const itens = [...carrinho.values()];
   const qtd = itens.reduce((s, i) => s + i.quantidade, 0);
-  document.getElementById('carrinho-qtd').textContent = qtd;
+  document.getElementById("carrinho-qtd").textContent = qtd;
 
-  const lista = document.getElementById('carrinho-itens');
+  const lista = document.getElementById("carrinho-itens");
   lista.innerHTML = itens.length
-    ? itens.map(({ jogo, quantidade }) => `
+    ? itens
+        .map(
+          ({ jogo, quantidade }) => `
         <li>
           <img src="${urlCapa(jogo)}" alt="">
           <div><strong>${jogo.titulo}</strong><br>${quantidade} × ${formatarBRL(precoDe(jogo))}</div>
           <button class="remover" data-remover="${jogo.id}" aria-label="Remover">✕</button>
-        </li>`).join('')
+        </li>`,
+        )
+        .join("")
     : '<li class="vazio">Seu carrinho está vazio.</li>';
 
   const total = totalCarrinho();
-  document.getElementById('carrinho-total').textContent = formatarBRL(total);
+  document.getElementById("carrinho-total").textContent = formatarBRL(total);
   const falta = CONFIG.freteGratisAcima - total;
-  document.getElementById('carrinho-frete').textContent = total === 0 ? ''
-    : falta > 0 ? `Faltam ${formatarBRL(falta)} para frete grátis.` : 'Frete grátis garantido!';
+  document.getElementById("carrinho-frete").textContent =
+    total === 0
+      ? ""
+      : falta > 0
+        ? `Faltam ${formatarBRL(falta)} para frete grátis.`
+        : "Frete grátis garantido!";
 }
 
 function finalizarCompra() {
   if (carrinho.size === 0) return;
   const total = totalCarrinho();
-  Observabilidade.info('PEDIDO_SIMULADO', `Pedido de ${formatarBRL(total)}`, {
-    itens: [...carrinho.values()].map((i) => ({ id: i.jogo.id, qtd: i.quantidade })), total
+  Observabilidade.info("PEDIDO_SIMULADO", `Pedido de ${formatarBRL(total)}`, {
+    itens: [...carrinho.values()].map((i) => ({
+      id: i.jogo.id,
+      qtd: i.quantidade,
+    })),
+    total,
   });
   carrinho.clear();
   renderizarCarrinho();
@@ -168,38 +192,52 @@ function finalizarCompra() {
 }
 
 function alternarCarrinho(abrir) {
-  document.getElementById('carrinho').classList.toggle('aberto', abrir);
+  document.getElementById("carrinho").classList.toggle("aberto", abrir);
 }
 
 let temporizadorAviso = null;
 function avisar(texto) {
-  const el = document.getElementById('aviso');
+  const el = document.getElementById("aviso");
   el.textContent = texto;
-  el.classList.add('visivel');
+  el.classList.add("visivel");
   clearTimeout(temporizadorAviso);
-  temporizadorAviso = setTimeout(() => el.classList.remove('visivel'), 2500);
+  temporizadorAviso = setTimeout(() => el.classList.remove("visivel"), 2500);
 }
 
 /* ---------------- Verificação de saúde ---------------- */
 
 function verificarSaude() {
-  const cards = document.querySelectorAll('#grade .card').length;
+  const cards = document.querySelectorAll("#grade .card").length;
   const esperado = jogosFiltrados().length;
-  const imagens = [...document.querySelectorAll('#vitrine img')];
-  const quebradas = imagens.filter((img) => img.complete && img.naturalWidth === 0).length;
-  const dados = { cardsExibidos: cards, cardsEsperados: esperado, imagens: imagens.length, imagensQuebradas: quebradas };
+  const imagens = [...document.querySelectorAll("#vitrine img")];
+  const quebradas = imagens.filter(
+    (img) => img.complete && img.naturalWidth === 0,
+  ).length;
+  const dados = {
+    cardsExibidos: cards,
+    cardsEsperados: esperado,
+    imagens: imagens.length,
+    imagensQuebradas: quebradas,
+  };
   if (cards !== esperado || quebradas > 0 || esperado === 0) {
-    Observabilidade.alerta('SAUDE_DEGRADADA',
-      `vitrine com ${cards}/${esperado} jogos e ${quebradas} imagem(ns) quebrada(s)`, dados);
+    Observabilidade.alerta(
+      "SAUDE_DEGRADADA",
+      `vitrine com ${cards}/${esperado} jogos e ${quebradas} imagem(ns) quebrada(s)`,
+      dados,
+    );
   } else {
-    Observabilidade.info('SAUDE_OK', `vitrine com ${cards}/${esperado} jogos, imagens ok`, dados);
+    Observabilidade.info(
+      "SAUDE_OK",
+      `vitrine com ${cards}/${esperado} jogos, imagens ok`,
+      dados,
+    );
   }
 }
 
 /* ---------------- Eventos ---------------- */
 
-document.addEventListener('click', (ev) => {
-  const alvo = ev.target.closest('button');
+document.addEventListener("click", (ev) => {
+  const alvo = ev.target.closest("button");
   if (!alvo) return;
   if (alvo.dataset.adicionar) adicionarAoCarrinho(alvo.dataset.adicionar);
   if (alvo.dataset.remover) removerDoCarrinho(alvo.dataset.remover);
@@ -208,12 +246,12 @@ document.addEventListener('click', (ev) => {
     renderizarFiltros();
     renderizarCatalogo();
   }
-  if (alvo.id === 'abrir-carrinho') alternarCarrinho(true);
-  if (alvo.id === 'fechar-carrinho') alternarCarrinho(false);
-  if (alvo.id === 'finalizar') finalizarCompra();
+  if (alvo.id === "abrir-carrinho") alternarCarrinho(true);
+  if (alvo.id === "fechar-carrinho") alternarCarrinho(false);
+  if (alvo.id === "finalizar") finalizarCompra();
 });
 
-document.getElementById('busca').addEventListener('input', (ev) => {
+document.getElementById("busca").addEventListener("input", (ev) => {
   filtro.texto = ev.target.value;
   renderizarCatalogo();
 });
@@ -227,7 +265,7 @@ async function iniciar() {
   CONFIG = await carregarConfig();
   Observabilidade.definirVersaoApp(CONFIG.versao);
   const build = Observabilidade.contexto();
-  document.getElementById('versao').textContent =
+  document.getElementById("versao").textContent =
     `versão ${CONFIG.versao} · build ${build.ref} @ ${build.commit}`;
 
   const catalogo = await carregarCatalogo(CONFIG);
@@ -240,9 +278,13 @@ async function iniciar() {
 
   renderizarFiltros();
   renderizarCatalogo();
-  Observabilidade.info('APP_PRONTA', `Loja pronta com ${JOGOS.length} jogos`, { versao: CONFIG.versao });
+  Observabilidade.info("APP_PRONTA", `Loja pronta com ${JOGOS.length} jogos`, {
+    versao: CONFIG.versao,
+  });
 }
 
 iniciar().catch((erro) => {
-  Observabilidade.erro('FALHA_INICIALIZACAO', erro.message, { pilha: erro.stack });
+  Observabilidade.erro("FALHA_INICIALIZACAO", erro.message, {
+    pilha: erro.stack,
+  });
 });
